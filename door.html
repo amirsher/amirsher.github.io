@@ -20,7 +20,7 @@
 </head>
 <body>
 <div id="main">
-  <button id="connectB" onclick="connectBT()" style="display:none;">connect</button>
+  <button id="connectB" onclick="connectBT()" >connect</button>
   <button id="sendB" onclick="sendMessageT()" style="display:none;">door</button>
 </div>
 
@@ -32,103 +32,26 @@
   const CHARACTERISTIC_TX = '6E400003-B5A3-F393-E0A9-E50E24DCCA9E'.toLowerCase();
   const CHARACTERISTIC_RX = '6E400002-B5A3-F393-E0A9-E50E24DCCA9E'.toLowerCase();
 
-window.onload = () => {
-  populateBluetoothDevices();
-};
-
-async function populateBluetoothDevices() {
-  try {
-    console.log('Getting existing permitted Bluetooth devices...');
-    const devices = await navigator.bluetooth.getDevices();
-
-    console.log('> Got ' + devices.length + ' Bluetooth devices.');
-    for (const device of devices) {
-      if (device.name == 'mpy-uart') {
-        console.log("Device connected");
-        document.querySelector('#connectB').style.display = 'block';
-      } else {
-        if (TimerLoadx) clearTimeout(TimerLoadx);
-        TimerLoadx = setTimeout(populateBluetoothDevices, 1000);
-      }
-    }
-  }
-  catch(error) {
-    console.log('Argh! ' + error);
-  }
-}
 
 async function connectBT() {
-          await requestDevice();
-}
-
- async function sendMessageT() {
-
-//    var inputField = document.getElementById('log-message-input');
-//    let textToWrite = inputField.value;  // Your string here
-    var service = await bluetooth.getPrimaryService(UART_SERVICE_ID);
-    console.log("Getting characteristic");
-    var characteristic = await service.getCharacteristic(CHARACTERISTIC_RX);
-    console.log("Write value");
+navigator.bluetooth.requestDevice({ filters: [{ name: "mpy-uart" },] })
+.then(device => device.gatt.connect())
+.then(server => server.getPrimaryService(UART_SERVICE_ID))
+.then(service => service.getCharacteristic(CHARACTERISTIC_RX))
+.then(characteristic => {
+  // Writing 1 is the signal to reset energy expended.
+//  const resetEnergyExpended = Uint8Array.of(1);
     let encoder = new TextEncoder(); // Encode string to bytes
 //    let data = encoder.encode(textToWrite);
     let data = encoder.encode('Toggle');
-    await characteristic.writeValue(data);
-}
+  return characteristic.writeValue(data);
+})
+.then(_ => {
+  console.log('Energy expended has been reset.');
+location.reload();
+})
+.catch(error => { console.error(error); });}
 
-async function requestDevice() {
-  console.log('Requesting any Bluetooth Device...');
-  var device = await navigator.bluetooth.requestDevice({
-filters: [
-    { name: "mpy-uart" },
-  ],   // filters: [...] <- Prefer filters to save energy & show relevant devices.
- //     acceptAllDevices: true,
-    });
-   await connectDevice(device);
-   console.log("Device connected");
-    if (TimerLoadx) clearTimeout(TimerLoadx);
-}
-
-var TimerLoadx;
-async function onDisconnected() {
-    document.querySelector('#sendB').style.display = 'none';
-    console.log('> Bluetooth Device disconnected');
-    if (TimerLoadx) clearTimeout(TimerLoadx);
-    TimerLoadx = setTimeout(populateBluetoothDevices, 1000);
-
-}
-
-async function connectDevice(device) { // replace the empty function from previous steps
-  device.addEventListener('gattserverdisconnected', onDisconnected);
-  bluetooth = await device.gatt.connect();
-  return new Promise(async (resolve) => {
-    console.log("Getting UART service");
-    var service = await bluetooth.getPrimaryService(UART_SERVICE_ID);
-    console.log("Getting characteristic");
-    var characteristic_tx = await service.getCharacteristic(CHARACTERISTIC_TX);
-    await characteristic_tx.startNotifications();
-    characteristic_tx.addEventListener('characteristicvaluechanged', handleNotifications);
-      document.querySelector('#sendB').style.display = 'block';
-  });
-}
-
-function handleNotifications(event) {
-    let value = event.target.value;
-    let decoder = new TextDecoder('utf-8');
-    let str = decoder.decode(value);
-
-    console.log(`Received notification: ${str}`);
-//    var newLogEntry = document.createElement("p");
-//    newLogEntry.textContent = str;
-//    var loggingDiv = document.getElementById('logging-info');
-//    loggingDiv.appendChild(newLogEntry);
-}
-
-function decode(encoded)
-{
-    var decoder = new TextDecoder('utf-8');
-    var decoded_value = decoder.decode(encoded);
-    return JSON.stringify(decoded_value)
-}
 
 </script>
 </html>
