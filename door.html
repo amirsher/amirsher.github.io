@@ -14,9 +14,10 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="description" content="">
     <meta name="viewport" content="width=device-width">
+    <meta name="theme-color" content="green"/>
 
     <style>
-        #connectB {
+        #connectB, #send {
             width: 148px;
             font-size: 48px;
             border: none;
@@ -37,16 +38,22 @@
         @media (prefers-color-scheme: dark) {
 
             html, body {
+                color: white;
                 background-color: #333;
             }
         }
     </style>
 </head>
 <body>
+
+    <button id="connect">Connect</button>
+    <button id="reconnect">Reconnect</button>
+<!--  <button id="send">Send Message</button>-->
     <div id="main">
+
     <!--  <button id="connectB" onclick="connectBTx()" >garage</button>-->
 
-      <button id="connectB" onclick="connectBTx()" title="click to toggle garage door"><svg xmlns="http://www.w3.org/2000/svg">
+      <button id="send" title="click to toggle garage door"><svg xmlns="http://www.w3.org/2000/svg">
         <g id="io" viewBox="0 0 128 128">
           <path id="door_frame" d="M64 10.23zm0 0L32.75 26.45 1.5 42.68h9.84v70.86H7.27v4.23H120.7v-4.23h-4.04V42.68h9.84L95.25 26.45 64 10.23zM20.82 42.68h86.35v70.86H20.82V42.68z"></path>
           <path id="box1" d="m 24.8345,51.6419 0,6.6573 78.322,0 0,-6.6573 -78.322,0 z"></path>
@@ -59,6 +66,8 @@
 
     </div>
 
+    <div id="status">Disconnected</div>
+
   </body>
 <script>
     var bluetooth = null;
@@ -67,37 +76,49 @@
     const CHARACTERISTIC_TX = '6E400003-B5A3-F393-E0A9-E50E24DCCA9E'.toLowerCase();
     const CHARACTERISTIC_RX = '6E400002-B5A3-F393-E0A9-E50E24DCCA9E'.toLowerCase();
 
-  /*
-  async function connectBT() {
-    navigator.bluetooth.requestDevice({ filters: [{ name: "mpy-uart" },] })
-    .then(device => device.gatt.connect())
-    .then(server => server.getPrimaryService(UART_SERVICE_ID))
-    .then(service => service.getCharacteristic(CHARACTERISTIC_RX))
-    .then(characteristic => {
-      // Writing 1 is the signal to reset energy expended.
-    //  const resetEnergyExpended = Uint8Array.of(1);
-        let encoder = new TextEncoder(); // Encode string to bytes
-    //    let data = encoder.encode(textToWrite);
-        let data = encoder.encode('Toggle');
-      return characteristic.writeValue(data);
-    })
-    .then(_ => {
-      console.log('Energy expended has been reset.');
-    location.reload();
-    })
-    .catch(error => { console.error(error); });
-  }
-  */
+/*
+    async function connectBT() {
 
+        navigator.bluetooth.requestDevice({ filters: [{ name: "mpy-uart" }] })
+        .then(device => {
+          // Set up event listener for when device gets disconnected.
+          device.addEventListener('gattserverdisconnected', onDisconnected);
+
+          // Attempts to connect to remote GATT Server.
+          return device.gatt.connect();
+        })
+        .then(server => {
+          // Getting Battery Service…
+          return server.getPrimaryService(UART_SERVICE_ID);
+        })
+        .then(service => {
+          // Getting Battery Level Characteristic…
+          return service.getCharacteristic(CHARACTERISTIC_RX);
+        })
+        .then(characteristic => {
+              // Writing 1 is the signal to reset energy expended.
+            //  const resetEnergyExpended = Uint8Array.of(1);
+                let encoder = new TextEncoder(); // Encode string to bytes
+            //    let data = encoder.encode(textToWrite);
+                let data = encoder.encode('Toggle');
+              return characteristic.writeValue(data);
+            })
+        .then(_ => {
+              console.log('toggled door');
+            location.reload();
+            })
+        .catch(error => { console.error(error); });
+
+    }
+*/
+/*
   var device = null;
   let  gatt, service, characteristic;
 
   async function connectBTx() {
       try {
           if (!device) {
-              device = await navigator.bluetooth.requestDevice({
-                filters: [{ name: ["mpy-uart"] }],
-              });
+              device = await navigator.bluetooth.requestDevice({filters: [{ name: ["mpy-uart"] }] });
                 device.addEventListener('gattserverdisconnected', onDisconnected);
               gatt = await device.gatt.connect();
               service = await gatt.getPrimaryService(UART_SERVICE_ID);
@@ -126,6 +147,132 @@
       characteristic = null;
       document.getElementById("io").style.fill = 'red';
   }
+  */
+
+
+    let device, server, service, characteristic;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      if ('permissions' in navigator && 'bluetooth' in navigator) {
+        try {
+          const devices = await navigator.bluetooth.getDevices();
+          if (devices.length > 0) {
+            device = devices[0];
+            await startWatchingAdvertisements(device);
+            document.getElementById('status').innerText = 'Watching for advertisements...';
+            document.getElementById("io").style.fill = 'red';
+          }
+        } catch (error) {
+          console.log('Error during getDevices:', error);
+          document.getElementById('status').innerText = 'Error: ' + error;
+          document.getElementById("io").style.fill = 'red';
+        }
+      }
+    });
+
+    document.getElementById('connect').addEventListener('click', async () => {
+      try {
+        if (device && device.gatt.connected) {
+          device.gatt.disconnect();
+        }
+
+        device = await navigator.bluetooth.requestDevice({
+          filters: [{ name: ["mpy-uart"] }]
+        });
+
+        localStorage.setItem('deviceId', device.id);
+
+        device.addEventListener('gattserverdisconnected', onDisconnected);
+
+        server = await device.gatt.connect();
+        service = await server.getPrimaryService(UART_SERVICE_ID);
+        characteristic = await service.getCharacteristic(CHARACTERISTIC_RX);
+
+        document.getElementById('status').innerText = 'Connected';
+        document.getElementById("io").style.fill = 'green';
+      } catch (error) {
+        console.log('Error:', error);
+        document.getElementById('status').innerText = 'Error connecting: ' + error;
+        document.getElementById("io").style.fill = 'red';
+      }
+    });
+
+    document.getElementById('reconnect').addEventListener('click', async () => {
+      try {
+        const savedDeviceId = localStorage.getItem('deviceId');
+        if (!savedDeviceId) {
+          document.getElementById('status').innerText = 'No saved device to reconnect to.';
+          document.getElementById("io").style.fill = 'red';
+          return;
+        }
+
+        const devices = await navigator.bluetooth.getDevices();
+        device = devices.find(d => d.id === savedDeviceId);
+
+        if (device) {
+          await startWatchingAdvertisements(device);
+          document.getElementById('status').innerText = 'Watching for advertisements...';
+          document.getElementById("io").style.fill = 'red';
+        } else {
+          document.getElementById('status').innerText = 'Device not found';
+          document.getElementById("io").style.fill = 'red';
+        }
+      } catch (error) {
+        console.log('Error:', error);
+        document.getElementById('status').innerText = 'Error reconnecting: ' + error;
+        document.getElementById("io").style.fill = 'red';
+      }
+    });
+
+    document.getElementById('send').addEventListener('click', async () => {
+      if (!characteristic) {
+        alert('You must connect first!');
+        return;
+      }
+
+      const message = new TextEncoder().encode('Toggle');
+      try {
+        await characteristic.writeValue(message);
+        document.getElementById('status').innerText = 'Message sent';
+        document.getElementById("io").style.fill = 'green';
+      } catch (error) {
+        console.log('Error:', error);
+        document.getElementById('status').innerText = 'Error sending message: ' + error;
+        document.getElementById("io").style.fill = 'red';
+      }
+    });
+
+    function onDisconnected() {
+      document.getElementById('status').innerText = 'Disconnected';
+      document.getElementById("io").style.fill = 'red';
+      localStorage.removeItem('deviceId');
+    }
+
+    async function startWatchingAdvertisements(device) {
+      try {
+        device.addEventListener('advertisementreceived', async event => {
+          console.log('Advertisement received from:', event.device.name);
+          document.getElementById('status').innerText = 'Device in range. Connecting...';
+          document.getElementById("io").style.fill = 'red';
+          try {
+            await device.gatt.connect();
+            service = await device.gatt.getPrimaryService(UART_SERVICE_ID);
+            characteristic = await service.getCharacteristic(CHARACTERISTIC_RX);
+            document.getElementById('status').innerText = 'Reconnected';
+            document.getElementById("io").style.fill = 'green';
+          } catch (connectError) {
+            console.log('Error during connect:', connectError);
+            document.getElementById('status').innerText = 'Error connecting: ' + connectError;
+            document.getElementById("io").style.fill = 'red';
+          }
+        });
+        await device.watchAdvertisements();
+      } catch (error) {
+        console.log('Error watching advertisements:', error);
+        document.getElementById('status').innerText = 'Error: ' + error;
+        document.getElementById("io").style.fill = 'red';
+      }
+    }
 
 </script>
 </html>
