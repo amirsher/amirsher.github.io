@@ -3,55 +3,95 @@
 <head>
     <title>Bluetooth Echo</title>
     <style>
-        button {
+        #connectB {
             width: 20ch;
             font-size: 48px;
             margin: 20px;
             padding: 10px;
             box-sizing: border-box;
+            background: red;
+            color: white;
       }
       #main {
         display: flex;
         flex-direction: column;
         align-items: center;
-        margin-top: 50px;
+        margin-top: 50%;
       }
     </style>
 </head>
 <body>
 <div id="main">
-  <button id="connectB" onclick="connectBT()" >connect</button>
-  <button id="sendB" onclick="sendMessageT()" style="display:none;">door</button>
+  <button id="connectB" onclick="connectBTx()" >DOOR</button>
 </div>
 
   </body>
 <script>
-  var bluetooth = null;
-  // shared UUIDs between MicroPython and JS
-  const UART_SERVICE_ID = '6E400001-B5A3-F393-E0A9-E50E24DCCA9E'.toLowerCase();
-  const CHARACTERISTIC_TX = '6E400003-B5A3-F393-E0A9-E50E24DCCA9E'.toLowerCase();
-  const CHARACTERISTIC_RX = '6E400002-B5A3-F393-E0A9-E50E24DCCA9E'.toLowerCase();
+    var bluetooth = null;
+    // shared UUIDs between MicroPython and JS
+    const UART_SERVICE_ID = '6E400001-B5A3-F393-E0A9-E50E24DCCA9E'.toLowerCase();
+    const CHARACTERISTIC_TX = '6E400003-B5A3-F393-E0A9-E50E24DCCA9E'.toLowerCase();
+    const CHARACTERISTIC_RX = '6E400002-B5A3-F393-E0A9-E50E24DCCA9E'.toLowerCase();
 
+  /*
+  async function connectBT() {
+    navigator.bluetooth.requestDevice({ filters: [{ name: "mpy-uart" },] })
+    .then(device => device.gatt.connect())
+    .then(server => server.getPrimaryService(UART_SERVICE_ID))
+    .then(service => service.getCharacteristic(CHARACTERISTIC_RX))
+    .then(characteristic => {
+      // Writing 1 is the signal to reset energy expended.
+    //  const resetEnergyExpended = Uint8Array.of(1);
+        let encoder = new TextEncoder(); // Encode string to bytes
+    //    let data = encoder.encode(textToWrite);
+        let data = encoder.encode('Toggle');
+      return characteristic.writeValue(data);
+    })
+    .then(_ => {
+      console.log('Energy expended has been reset.');
+    location.reload();
+    })
+    .catch(error => { console.error(error); });
+  }
+  */
 
-async function connectBT() {
-navigator.bluetooth.requestDevice({ filters: [{ name: "mpy-uart" },] })
-.then(device => device.gatt.connect())
-.then(server => server.getPrimaryService(UART_SERVICE_ID))
-.then(service => service.getCharacteristic(CHARACTERISTIC_RX))
-.then(characteristic => {
-  // Writing 1 is the signal to reset energy expended.
-//  const resetEnergyExpended = Uint8Array.of(1);
-    let encoder = new TextEncoder(); // Encode string to bytes
-//    let data = encoder.encode(textToWrite);
-    let data = encoder.encode('Toggle');
-  return characteristic.writeValue(data);
-})
-.then(_ => {
-  console.log('Energy expended has been reset.');
-location.reload();
-})
-.catch(error => { console.error(error); });}
+  var device = null;
+  let  gatt, service, characteristic;
 
+  async function connectBTx() {
+      try {
+          if (!device) {
+              device = await navigator.bluetooth.requestDevice({
+                filters: [{ name: ["mpy-uart"] }],
+              });
+                device.addEventListener('gattserverdisconnected', onDisconnected);
+              gatt = await device.gatt.connect();
+              service = await gatt.getPrimaryService(UART_SERVICE_ID);
+              characteristic = await service.getCharacteristic(CHARACTERISTIC_RX);
+              document.getElementById("connectB").style.background = 'green';
+          }
+//              console.log(device.gatt.connected);
+              let encoder = new TextEncoder(); // Encode string to bytes
+              //    let data = encoder.encode(textToWrite);
+              let data = encoder.encode('Toggle');
+              await characteristic.writeValue(data);
+
+          //    await device.gatt.disconnect()
+
+      } catch (error) {
+            console.error(error);
+        // Expected output: ReferenceError: nonExistentFunction is not defined
+            onDisconnected();
+      }
+  }
+
+  function onDisconnected() {
+      device = null;
+      gatt = null;
+      service = null;
+      characteristic = null;
+      document.getElementById("connectB").style.background = 'red';
+  }
 
 </script>
 </html>
