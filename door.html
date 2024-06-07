@@ -4,26 +4,47 @@
     <title>Bluetooth Echo</title>
     <style>
         #connectB {
-            width: 20ch;
+            width: 148px;
             font-size: 48px;
-            margin: 20px;
-            padding: 10px;
-            box-sizing: border-box;
-            background: red;
-            color: white;
-      }
-      #main {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        margin-top: 50%;
-      }
+            border: none;
+            background: transparent;
+            text-align: center;
+        }
+        #main {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 50%;
+        }
+        #io {
+            fill: red;
+        }
+
+/* Styles for users who prefer dark mode at the OS level */
+        @media (prefers-color-scheme: dark) {
+
+            html, body {
+                background-color: #333;
+            }
+        }
     </style>
 </head>
 <body>
-<div id="main">
-  <button id="connectB" onclick="connectBTx()" >DOOR</button>
-</div>
+    <div id="main">
+    <!--  <button id="connectB" onclick="connectBTx()" >garage</button>-->
+
+      <button id="connectB" onclick="connectBTx()" title="click to toggle garage door"><svg xmlns="http://www.w3.org/2000/svg">
+        <g id="io" viewBox="0 0 128 128">
+          <path id="door_frame" d="M64 10.23zm0 0L32.75 26.45 1.5 42.68h9.84v70.86H7.27v4.23H120.7v-4.23h-4.04V42.68h9.84L95.25 26.45 64 10.23zM20.82 42.68h86.35v70.86H20.82V42.68z"></path>
+          <path id="box1" d="m 24.8345,51.6419 0,6.6573 78.322,0 0,-6.6573 -78.322,0 z"></path>
+          <path id="box2" d="m 24.8345,67.9629 0,6.6573 78.322,0 0,-6.6573 -78.322,0 z"></path>
+          <path id="box3" d="m 24.8345,83.1029 0,6.6573 78.322,0 0,-6.6573 -78.322,0 z"></path>
+          <path id="box4" d="m 24.8345,98.4249 0,6.6573 78.322,0 0,-6.6573 -78.322,0 z"></path>
+        </g>
+      </svg>
+    </button>
+
+    </div>
 
   </body>
 <script>
@@ -68,9 +89,9 @@
               gatt = await device.gatt.connect();
               service = await gatt.getPrimaryService(UART_SERVICE_ID);
               characteristic = await service.getCharacteristic(CHARACTERISTIC_RX);
-              document.getElementById("connectB").style.background = 'green';
           }
 //              console.log(device.gatt.connected);
+              document.getElementById("io").style.fill = 'green';
               let encoder = new TextEncoder(); // Encode string to bytes
               //    let data = encoder.encode(textToWrite);
               let data = encoder.encode('Toggle');
@@ -90,7 +111,7 @@
       gatt = null;
       service = null;
       characteristic = null;
-      document.getElementById("connectB").style.background = 'red';
+      document.getElementById("io").style.fill = 'red';
   }
 
 </script>
