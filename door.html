@@ -159,7 +159,7 @@
           if (devices.length > 0) {
             device = devices[0];
             await startWatchingAdvertisements(device);
-            document.getElementById('status').innerText = 'Watching for advertisements...';
+            document.getElementById('status').innerText = 'Watching for bluetooth door...';
             document.getElementById("io").style.fill = 'red';
           }
         } catch (error) {
@@ -211,7 +211,7 @@
 
         if (device) {
           await startWatchingAdvertisements(device);
-          document.getElementById('status').innerText = 'Watching for advertisements...';
+          document.getElementById('status').innerText = 'Watching for bluetooth door...';
           document.getElementById("io").style.fill = 'red';
         } else {
           document.getElementById('status').innerText = 'Device not found';
@@ -268,7 +268,7 @@
         });
         await device.watchAdvertisements();
       } catch (error) {
-        console.log('Error watching advertisements:', error);
+        console.log('Error watching bluetooth door:', error);
         document.getElementById('status').innerText = 'Error: ' + error;
         document.getElementById("io").style.fill = 'red';
       }
